@@ -4,10 +4,6 @@ import cv2
 #import numpy as np
 #import time
 
-#capture = cv2.VideoCapture('sample-green-ball.mp4')
-#if capture.isOpened() == False:
-#    print("Error opening video")
-
 h_upper = 0
 s_upper = 0
 v_upper = 0
