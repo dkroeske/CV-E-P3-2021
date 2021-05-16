@@ -5,11 +5,14 @@ import cv2
 import serial
 
 # Connection to Arduino
-arduino = serial.Serial(port='COM4', baudrate=115200, timeout=.1)
+arduino = serial.Serial(port='COM2', baudrate=115200, timeout=.1)
 
 while True:
 
     done = False
+    prevIsInHitRange = False
+    nextIsInHitRange = False
+
     capture = cv2.VideoCapture('resources/sample_video.mp4')
     if capture.isOpened() == False:
         print("Error opening video")
@@ -43,21 +46,37 @@ while True:
             c = max(contours, key=cv2.contourArea)
             (x, y), radius = cv2.minEnclosingCircle(c)
             cv2.circle(frame, (int(x), int(y)), int(5), (0, 255, 0), -1)
-            print( '({},{})'.format( int(x), int(y) ) )
+            #print( '({},{})'.format( int(x), int(y) ) )
 
             # Check is (x,y) is in circle
             xc = 560
             yc = 770
-            radius = 30
+            straal = 30
             dist = math.sqrt( math.pow(xc-x,2) + math.pow(yc-y,2))
-            if dist < radius:
-                cv2.circle(frame, (int(xc), int(yc)), int(radius), (0, 0, 255), -1)
-                arduino.write("FIRE")
-                ack = arduino.readline()
-                while ack != 'OK':
-                    ack = arduino.readline()
+            if dist < straal:
+                cv2.circle(frame, (int(xc), int(yc)), int(straal), (0, 0, 255), -1)
             else:
-                cv2.circle(frame, (int(xc), int(yc)), int(radius), (0, 0, 0), -1)
+                cv2.circle(frame, (int(xc), int(yc)), int(straal), (0, 0, 0), -1)
+
+            # prev new
+            #  f    f   -> hit = false
+            #  f    t   -> hit = true
+            #  t    f   -> hit = false
+            #  t    t   -> hit = false
+
+            if dist < straal - 5:
+                nextIsInHitRange = True
+            else:
+                if dist < straal + 5:
+                    nextIsInHitRange = False
+
+            # Check if hit. Trigger Arduino
+            if (prevIsInHitRange == False) and (nextIsInHitRange == True):
+                cmd = "SHOOT:1".encode("UTF8")
+                arduino.write(cmd)
+                print(cmd)
+
+            prevIsInHitRange = nextIsInHitRange
 
             cv2.imshow('Frame', frame)
             cv2.imshow('Mask', mask)
